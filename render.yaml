@@ -7,7 +7,7 @@ services:
     healthCheckPath: /healthz
     autoDeployTrigger: checksPass
     # ponytail: free plan has no preDeployCommand; one instance, so init before serve cannot race. Move back to preDeployCommand on a paid plan.
-    dockerCommand: /bin/sh -c "python -m app.db init && exec python -m app.serve"
+    dockerCommand: /bin/sh -c python -m app.db init && exec python -m app.serve
     envVars:
       - key: DATABASE_URL
         fromDatabase:
