@@ -1,0 +1,68 @@
+services:
+  - type: web
+    name: open-casting
+    runtime: docker
+    region: singapore
+    plan: 0.5c-512mb
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    preDeployCommand: python -m app.db init
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: open-casting-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: open-casting-cache
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: STUDIO_PASSWORD_HASH
+        sync: false
+      - key: METRICS_TOKEN
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: CLIENT_IP_HEADER
+        value: True-Client-IP
+      - key: SEED_DEMO
+        value: "true"
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_MAX_OVERFLOW
+        value: "5"
+  - type: keyvalue
+    name: open-casting-cache
+    region: singapore
+    plan: 256mb
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+  - type: workflow
+    name: open-casting-jobs
+    runtime: python
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workflows
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.12
+      - key: DATABASE_URL
+        fromDatabase:
+          name: open-casting-db
+          property: connectionString
+      - key: DB_POOL_SIZE
+        value: "1"
+      - key: DB_MAX_OVERFLOW
+        value: "0"
+databases:
+  - name: open-casting-db
+    region: singapore
+    plan: 0.1c-256mb
+    postgresMajorVersion: "18"
+    ipAllowList: []

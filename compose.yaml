@@ -1,0 +1,54 @@
+name: open-casting
+services:
+  app:
+    build: .
+    cpus: 0.5
+    mem_limit: 512m
+    ports:
+      - "127.0.0.1:${APP_PORT:-8900}:10000"
+    environment:
+      PORT: "10000"
+      DATABASE_URL: postgresql+psycopg://casting:${POSTGRES_PASSWORD:?use --env-file _workspace/compose.env}@postgres:5432/casting
+      REDIS_URL: redis://valkey:6379/0
+      SESSION_SECRET: ${SESSION_SECRET:?use --env-file _workspace/compose.env}
+      RATE_LIMIT_IP: ${RATE_LIMIT_IP:-300}
+      SEED_DEMO: "true"
+      DB_POOL_SIZE: "5"
+      DB_MAX_OVERFLOW: "5"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    command: ["sh", "-c", "python -m app.db init && exec python -m app.serve"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:10000/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  postgres:
+    image: postgres:18-alpine
+    cpus: 1
+    mem_limit: 512m
+    environment:
+      POSTGRES_DB: casting
+      POSTGRES_USER: casting
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?use --env-file _workspace/compose.env}
+    volumes: ["postgres-data:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U casting -d casting"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  valkey:
+    image: valkey/valkey:8-alpine
+    cpus: 0.5
+    mem_limit: 256m
+    command: ["valkey-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+volumes:
+  postgres-data:

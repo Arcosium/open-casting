@@ -1,0 +1,6 @@
+# Use the same uvicorn invocation for baseline and after measurements.
+# Request JSON logging is exercised separately through the default app.serve runtime.
+services:
+  app:
+    image: open-casting:after
+    command: ["sh", "-c", "python -m app.db init && exec python -m uvicorn app.main:create_app --factory --host 0.0.0.0 --port 10000 --no-access-log"]

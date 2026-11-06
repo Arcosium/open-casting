@@ -1,0 +1,11 @@
+.venv/
+data
+.env
+.env.*
+!.env.example
+_workspace/
+.pytest_cache/
+__pycache__/
+*.pyc
+.code-review-graph/
+.playwright-cli/
