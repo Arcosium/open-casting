@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#d5ef45">
+  <meta name="theme-color" content="#00b140">
   <title>Open Casting</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script type="module" src="/static/app.js"></script>
 </head>
 <body>
   <a class="skip" href="#main" data-i18n="skip"></a>
+  <div class="ticker" aria-hidden="true"><div class="ticker-track" id="ticker"></div></div>
   <header class="header">
-    <a class="brand" href="/" aria-label="Open Casting"><span class="brand-mark" aria-hidden="true">oc</span><span>OPEN<br>CASTING</span></a>
+    <a class="brand" href="/" aria-label="Open Casting"><span class="rec-dot" aria-hidden="true"></span>OPEN CASTING</a>
     <nav aria-label="주 탐색" data-i18n-label="nav_main">
       <a href="/" data-i18n="nav_missions"></a>
       <a href="/leaderboard" data-i18n="nav_ranks"></a>
@@ -22,6 +23,6 @@
   <div id="sponsorship"><!--SPONSOR--></div>
   <main id="main" tabindex="-1" aria-busy="true"><div class="loading">Open Casting…</div></main>
   <div id="notice" role="status" aria-live="polite"></div>
-  <footer><a href="/faq" data-i18n="nav_faq"></a><a href="/sponsor" data-i18n="nav_sponsor"></a><a href="/studio" data-i18n="nav_studio"></a><p data-i18n="footer_guard"></p></footer>
+  <footer><div class="footer-links"><a href="/faq" data-i18n="nav_faq"></a><a href="/sponsor" data-i18n="nav_sponsor"></a><a href="/studio" data-i18n="nav_studio"></a></div><p data-i18n="footer_guard"></p><div class="footer-mark" aria-hidden="true">OPEN CASTING</div></footer>
 </body>
 </html>

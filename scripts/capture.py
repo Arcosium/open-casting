@@ -87,6 +87,7 @@ def main():
                                 expect(page.locator('main [role=alert]')).to_have_count(0)
                             def shot(name, full=True):
                                 path = out/(str(width)+'-'+name+'.png')
+                                page.evaluate("Promise.all(document.getAnimations().filter(a => a.effect.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => null)))")  # settle one-shot entrance motion
                                 page.screenshot(path=str(path),full_page=full)
                                 defects = page.evaluate(checker.JS,False)
                                 failures.extend([name+': '+str(item) for item in defects])

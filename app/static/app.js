@@ -8,9 +8,12 @@ const t = (key, values = {}) => Object.entries(values).reduce((s, [k, v]) => s.r
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const tr = (key, values) => esc(t(key, values));
 const button = (key, href, secondary = false) => '<a class="button' + (secondary ? ' secondary' : '') + '" href="' + esc(href) + '">' + tr(key) + '</a>';
-const pageTop = (title, description = '') => '<div class="page-top"><h1>' + tr(title) + '</h1>' + (description ? '<p class="description">' + tr(description) + '</p>' : '') + '</div>';
+const pageTop = (title, description = '') => '<div class="page-top bleed"><div class="markers" aria-hidden="true"><i></i><i></i><i></i></div><h1>' + tr(title) + '</h1>' + (description ? '<p class="description">' + tr(description) + '</p>' : '') + '</div>';
 const field = (name, label, type = 'text', extra = '', hint = '') => '<div class="field"><label for="' + name + '">' + tr(label) + '</label><input id="' + name + '" name="' + name + '" type="' + type + '" ' + extra + (hint ? ' aria-describedby="' + name + '-hint"' : '') + '>' + (hint ? '<small id="' + name + '-hint">' + tr(hint) + '</small>' : '') + '</div>';
 const title = m => m.title || t(m.template);
+const glyph = template => '<span class="glyph ' + esc(template) + '" aria-hidden="true">' + ({'no-rieul': '<b>ㄹ</b>', telepathy: '<i></i><i></i>', 'ore-hunt': '<i></i>'.repeat(9)}[template] || '') + '</span>';
+const LIMITS = {'no-rieul': 7, telepathy: 5, 'ore-hunt': 60};
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const displayDate = stamp => new Date(stamp * 1000).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US', {timeZone: 'Asia/Seoul'});
 const inputDate = date => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
@@ -58,7 +61,12 @@ function rulesAside(template) {
 
 async function home() {
   const {missions} = await api('/api/missions');
-  main.innerHTML = '<section class="hero"><div><p class="eyebrow">' + tr('hero_kicker') + '</p><h1>' + tr('hero_a') + '<br><strong>' + tr('hero_b') + '</strong></h1><p class="description">' + tr('hero_desc') + '</p><div class="actions">' + button('hero_cta', '#missions') + '</div></div><div class="hero-art" aria-hidden="true"><div class="clapper"><div class="clapper-top"></div><div class="clapper-body"><b>' + tr('art_title').replace('\n', '<br>') + '</b><p>' + tr('art_caption') + '</p></div></div></div></section><section id="missions"><div class="section-heading"><h2>' + tr('missions_today') + '</h2><p>' + tr('daily_limit') + '</p></div>' + missions.map(m => '<article class="mission-row"><div class="mission-symbol ' + esc(m.template) + '" aria-hidden="true">' + ({'no-rieul': 'ㄹ', telepathy: '◎◎', 'ore-hunt': '◇'}[m.template]) + '</div><div>' + (m.is_sponsored ? '<div class="ad-inline">광고 · Sponsored by ' + esc(m.sponsor_name) + '</div>' : '') + '<h3><a href="/missions/' + esc(m.id) + '">' + esc(title(m)) + '</a></h3><p>' + tr('desc_' + m.template) + '</p><div class="meta"><span>' + tr('meta_' + m.template) + '</span></div></div>' + button(m.active ? 'play' : 'closed', '/missions/' + m.id, true) + '</article>').join('') + '</section><section class="casting-call"><div><h2>' + tr('casting_cta_title') + '</h2><p>' + tr('casting_cta_desc') + '</p></div>' + button('nav_casting', '/casting') + '</section>';
+  main.innerHTML = '<section class="stage bleed"><div class="markers" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="stage-copy"><p class="eyebrow">' + tr('hero_kicker') + '</p><h1><span>' + tr('hero_a') + '</span><span>' + tr('hero_b') + '</span></h1><p class="description">' + tr('hero_desc') + '</p><div class="actions">' + button('hero_cta', '#missions') + '</div></div><div class="viewfinder" aria-hidden="true"><div class="vf-top"><span class="vf-rec"><i></i>REC</span><span id="timecode">00:00:00:00</span></div><b>' + tr('art_title').replace('\n', '<br>') + '</b><p>' + tr('art_caption') + '</p></div><div class="stage-mark" aria-hidden="true">OPEN CASTING</div></section><section id="missions" class="missions"><div class="section-heading"><h2>' + tr('missions_today') + '</h2><p>' + tr('daily_limit') + '</p></div><div class="mission-list">' + missions.map(m => '<article class="mission-row">' + glyph(m.template) + '<div class="mission-copy">' + (m.is_sponsored ? '<div class="ad-inline">광고 · Sponsored by ' + esc(m.sponsor_name) + '</div>' : '') + '<h3><a href="/missions/' + esc(m.id) + '">' + esc(title(m)) + '</a></h3><p>' + tr('desc_' + m.template) + '</p><div class="meta"><span>' + tr('meta_' + m.template) + '</span></div></div>' + button(m.active ? 'play' : 'closed', '/missions/' + m.id, true) + '</article>').join('') + '</div></section><section class="casting-call bleed"><h2>' + tr('casting_cta_title') + '</h2><p>' + tr('casting_cta_desc') + '</p>' + button('nav_casting', '/casting') + '</section>';
+  const timecode = document.querySelector('#timecode'), start = performance.now();
+  if (!calm()) interval = setInterval(() => {
+    const frames = Math.floor((performance.now() - start) * .03);
+    timecode.textContent = [frames / 108000, frames / 1800 % 60, frames / 30 % 60, frames % 30].map(v => String(Math.floor(v)).padStart(2, '0')).join(':');
+  }, 1000 / 30);
 }
 
 async function missionPage(id) {
@@ -66,9 +74,10 @@ async function missionPage(id) {
   currentMission = detail.mission;
   run = detail.recent_run;
   ad(currentMission);
+  const head = '<div class="mission-top bleed"><a class="back" href="/">' + tr('back_missions') + '</a><div class="mission-title">' + glyph(currentMission.template) + '<h1>' + esc(title(currentMission)) + '</h1></div></div>';
   const intro = () => {
     clearInterval(interval);
-    main.innerHTML = '<a class="back" href="/">' + tr('back_missions') + '</a><div class="page-top"><h1>' + esc(title(currentMission)) + '</h1></div><div class="game-layout"><section class="game-panel"><div class="mission-symbol ' + esc(currentMission.template) + '" aria-hidden="true">' + ({'no-rieul':'ㄹ', telepathy:'◎◎', 'ore-hunt':'◇'}[currentMission.template]) + '</div><p class="game-intro">' + tr('desc_' + currentMission.template) + '</p>' + field('nickname', 'nickname', 'text', 'maxlength="24" autocomplete="off" value="' + esc(localStorage.getItem('oc_nickname') || '') + '"', 'nickname_hint') + '<div class="actions"><button id="start"' + (!currentMission.active || detail.attempts_left === 0 ? ' disabled' : '') + '>' + tr('start_run') + '</button>' + (run ? '<button id="resume" class="secondary">' + tr(run.finished ? 'view_record' : 'resume') + '</button>' : '') + '</div><p class="hint">' + tr('attempts_left', {n: detail.attempts_left}) + '</p>' + (!currentMission.active ? '<p class="hint">' + tr('closed') + '</p>' : '') + '</section>' + rulesAside(currentMission.template) + '</div>';
+    main.innerHTML = head + '<div class="game-layout"><section class="game-panel monitor enter"><div class="monitor-bar"><span class="vf-rec standby"><i></i>STANDBY</span><span>' + tr('meta_' + currentMission.template) + '</span></div><p class="game-intro">' + tr('desc_' + currentMission.template) + '</p>' + field('nickname', 'nickname', 'text', 'maxlength="24" autocomplete="off" value="' + esc(localStorage.getItem('oc_nickname') || '') + '"', 'nickname_hint') + '<div class="actions"><button id="start"' + (!currentMission.active || detail.attempts_left === 0 ? ' disabled' : '') + '>' + tr('start_run') + '</button>' + (run ? '<button id="resume" class="secondary">' + tr(run.finished ? 'view_record' : 'resume') + '</button>' : '') + '</div><p class="hint">' + tr('attempts_left', {n: detail.attempts_left}) + '</p>' + (!currentMission.active ? '<p class="hint">' + tr('closed') + '</p>' : '') + '</section>' + rulesAside(currentMission.template) + '</div>';
     action('#start', async () => {
       const nickname = document.querySelector('#nickname').value.trim();
       if (nickname) localStorage.setItem('oc_nickname', nickname);
@@ -81,17 +90,22 @@ async function missionPage(id) {
   const game = () => {
     clearInterval(interval);
     const template = currentMission.template;
-    const head = '<a class="back" href="/">' + tr('back_missions') + '</a><div class="page-top"><h1>' + esc(title(currentMission)) + '</h1></div>';
     if (run.finished) {
-      main.innerHTML = head + '<div class="game-layout"><section class="game-panel"><h2 class="result-title">' + tr('result_title') + '</h2><div class="result-score">' + run.score + '</div><p>' + tr(run.final ? 'final_score' : 'provisional') + '</p><p class="result-message">' + tr(run.reason === 'timeout' ? 'result_timeout' : run.reason === 'invalid_word' ? 'result_invalid' : 'result_complete') + '</p><p class="hint">' + tr('record_badge') + ' · ' + tr('display_only') + '</p><div class="actions section-gap">' + (detail.attempts_left > 0 && currentMission.active ? '<button id="again">' + tr('try_again') + '</button>' : '') + button('to_leaderboard', '/leaderboard?mission=' + id, true) + button('nav_casting', '/casting', true) + '</div>' + (template === 'ore-hunt' ? gridHtml(true) : '') + '</section>' + rulesAside(template) + '</div>';
+      main.innerHTML = head + '<div class="game-layout"><section class="game-panel monitor result enter"><div class="cut-stamp" aria-hidden="true">' + tr('cut_stamp') + '</div><h2 class="result-title">' + tr('result_title') + '</h2><div class="result-score">' + run.score + '</div><p>' + tr(run.final ? 'final_score' : 'provisional') + '</p><p class="result-message">' + tr(run.reason === 'timeout' ? 'result_timeout' : run.reason === 'invalid_word' ? 'result_invalid' : 'result_complete') + '</p><p class="hint">' + tr('record_badge') + ' · ' + tr('display_only') + '</p><div class="actions section-gap">' + (detail.attempts_left > 0 && currentMission.active ? '<button id="again">' + tr('try_again') + '</button>' : '') + button('to_leaderboard', '/leaderboard?mission=' + id, true) + button('nav_casting', '/casting', true) + '</div>' + (template === 'ore-hunt' ? gridHtml(true) : '') + '</section>' + rulesAside(template) + '</div>';
       action('#again', async () => intro());
+      const score = document.querySelector('.result-score'), begin = performance.now();
+      if (!calm() && run.score > 0) requestAnimationFrame(function count(now) {
+        const p = Math.min(1, (now - begin) / 700);
+        score.textContent = Math.round(run.score * (1 - (1 - p) ** 3));
+        if (p < 1) requestAnimationFrame(count);
+      });
       return;
     }
     let content = '';
     if (template === 'no-rieul') content = '<p class="progress">' + tr('round', {n:run.index + 1,total:8}) + '</p><div class="prompt">' + tr('category_' + run.category) + '</div><form id="answer" class="game-form"><label class="sr-only" for="word">' + tr('answer_label') + '</label><input id="word" name="word" maxlength="100" required autocomplete="off"><button type="submit">' + tr('answer_submit') + '</button></form><p class="hint">' + tr('word_hint') + '</p><p class="hint">' + tr('used_words') + ': ' + run.used.map(esc).join(', ') + '</p>';
     if (template === 'telepathy') content = '<p class="progress">' + tr('round', {n:run.index + 1,total:10}) + '</p><div class="prompt">' + tr('question_' + run.index) + '</div><div class="answer-options">' + [0,1,2,3].map(n => '<button data-option="' + n + '">' + tr('option_' + run.index + '_' + n) + '</button>').join('') + '</div><p class="hint">' + tr('provisional') + '</p>';
     if (template === 'ore-hunt') content = '<p class="progress">' + tr('digs_left', {n:25 - Object.keys(run.digs).length}) + '</p>' + gridHtml(false) + '<p class="hint">' + tr('ore_legend') + '</p>';
-    main.innerHTML = head + '<div class="game-layout"><section class="game-panel"><div class="game-head"><div><div class="timer" id="timer" aria-label="' + tr('time_left') + '"></div><span class="progress">' + tr('time_left') + '</span></div><div class="score"><strong>' + (run.score ?? '–') + '</strong><span>' + tr('score') + '</span></div></div>' + content + '</section>' + rulesAside(template) + '</div>';
+    main.innerHTML = head + '<div class="game-layout"><section class="game-panel monitor live"><div class="monitor-bar"><span class="vf-rec"><i></i>REC</span><span>' + esc(title(currentMission)) + '</span></div><div class="game-head"><div><div class="timer" id="timer" aria-label="' + tr('time_left') + '"></div><span class="progress">' + tr('time_left') + '</span></div><div class="score"><strong>' + (run.score ?? '–') + '</strong><span>' + tr('score') + '</span></div></div><div class="time-bar" aria-hidden="true"><i id="timebar"></i></div>' + content + '</section>' + rulesAside(template) + '</div>';
     action('#answer', async () => { run = await api('/api/runs/' + run.id + '/answer', {text:document.querySelector('#word').value,index:run.index}); game(); }, 'submit');
     for (const element of document.querySelectorAll('[data-option]')) action('[data-option="' + element.dataset.option + '"]', async () => { run = await api('/api/runs/' + run.id + '/answer', {text:Number(element.dataset.option),index:run.index}); game(); });
     for (const element of document.querySelectorAll('[data-cell]:not(:disabled)')) action('[data-cell="' + element.dataset.cell + '"]', async () => { const cell = Number(element.dataset.cell); run = await api('/api/runs/' + run.id + '/dig', {x:cell % 10,y:Math.floor(cell / 10)}); game(); });
@@ -101,8 +115,10 @@ async function missionPage(id) {
     const tick = async () => {
       const serverNow = snapshot.server_now + (performance.now() - localStart) / 1000;
       const displayDeadline = snapshot.deadline - (template === 'ore-hunt' ? 0 : 1.5);
-      const timer = document.querySelector('#timer');
-      if (timer) timer.textContent = Math.max(0, displayDeadline - serverNow).toFixed(1);
+      const timer = document.querySelector('#timer'), bar = document.querySelector('#timebar');
+      const left = Math.max(0, displayDeadline - serverNow);
+      if (timer) { timer.textContent = left.toFixed(1); timer.classList.toggle('low', left < LIMITS[template] * .3); }
+      if (bar) bar.style.transform = 'scaleX(' + Math.min(1, left / LIMITS[template]) + ')';
       if (serverNow >= snapshot.deadline && !checking && !busy) {
         checking = true;
         try { run = await api('/api/runs/' + snapshot.id); game(); }
@@ -130,7 +146,7 @@ async function leaderboardPage() {
   const selected = new URLSearchParams(location.search).get('mission') || 'weekly';
   const result = await api('/api/leaderboards/' + encodeURIComponent(selected));
   ad(missions.find(m => m.id === selected));
-  main.innerHTML = pageTop('leaderboard_title','leaderboard_desc') + '<label for="scope">' + tr('choose_mission') + '</label><select id="scope"><option value="weekly">' + tr('weekly') + '</option>' + missions.map(m => '<option value="' + esc(m.id) + '"' + (selected === m.id ? ' selected' : '') + '>' + esc(title(m)) + (m.is_sponsored ? ' · ' + esc(m.sponsor_name) : '') + '</option>').join('') + '</select>' + (result.has_demo ? '<div class="demo-note">' + tr('demo_badge') + '</div>' : '') + (result.provisional ? '<p class="hint">' + tr('provisional') + '</p>' : '') + '<div class="table-wrap"><table class="rank-table"><thead><tr><th>' + tr('rank') + '</th><th>' + tr('player') + '</th><th>' + tr('score') + '</th></tr></thead><tbody>' + result.rows.map(r => '<tr><td>' + r.rank + '</td><td>' + esc(r.nickname) + (r.is_demo ? '<small>' + tr('demo_row') + '</small>' : '') + '</td><td>' + r.score + '</td></tr>').join('') + '</tbody></table></div>' + (!result.rows.length ? '<p class="empty">' + tr('no_records') + '</p>' : '') + '<div class="my-rank"><strong>' + tr('my_rank') + '</strong><span>' + (result.mine ? result.mine.rank + ' · ' + esc(result.mine.nickname) + ' · ' + result.mine.score : tr('no_my_rank')) + '</span></div><p class="hint">' + tr('display_only') + '</p>';
+  main.innerHTML = pageTop('leaderboard_title','leaderboard_desc') + '<label for="scope">' + tr('choose_mission') + '</label><select id="scope"><option value="weekly">' + tr('weekly') + '</option>' + missions.map(m => '<option value="' + esc(m.id) + '"' + (selected === m.id ? ' selected' : '') + '>' + esc(title(m)) + (m.is_sponsored ? ' · ' + esc(m.sponsor_name) : '') + '</option>').join('') + '</select>' + (result.has_demo ? '<div class="demo-note">' + tr('demo_badge') + '</div>' : '') + (result.provisional ? '<p class="hint">' + tr('provisional') + '</p>' : '') + '<div class="table-wrap"><table class="rank-table"><thead><tr><th>' + tr('rank') + '</th><th>' + tr('player') + '</th><th>' + tr('score') + '</th></tr></thead><tbody>' + result.rows.map(r => '<tr' + (r.rank <= 3 ? ' class="top"' : '') + '><td>' + r.rank + '</td><td>' + esc(r.nickname) + (r.is_demo ? '<small>' + tr('demo_row') + '</small>' : '') + '</td><td>' + r.score + '</td></tr>').join('') + '</tbody></table></div>' + (!result.rows.length ? '<p class="empty">' + tr('no_records') + '</p>' : '') + '<div class="my-rank"><strong>' + tr('my_rank') + '</strong><span>' + (result.mine ? result.mine.rank + ' · ' + esc(result.mine.nickname) + ' · ' + result.mine.score : tr('no_my_rank')) + '</span></div><p class="hint">' + tr('display_only') + '</p>';
   document.querySelector('#scope').addEventListener('change', e => location.href = '/leaderboard?mission=' + encodeURIComponent(e.target.value));
 }
 
@@ -211,6 +227,7 @@ async function render() {
   ad(null);
   document.documentElement.lang = lang;
   document.querySelector('#language').textContent = lang === 'ko' ? 'English' : '한국어';
+  document.querySelector('#ticker').innerHTML = ['missions_today', 'daily_limit', 'free_only', 'ticker_pick'].map(key => '<span>' + tr(key) + '</span>').join('');
   document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
   document.querySelectorAll('[data-i18n-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.i18nLabel)));
   main.setAttribute('aria-busy','true');
@@ -225,7 +242,7 @@ async function render() {
     else if (path[0] === 'sponsor') await sponsorPage();
     else faqPage();
   } catch (error) {
-    main.innerHTML = '<p class="notice-box" role="alert">' + esc(error.message) + '</p>' + button('back_missions','/');
+    main.innerHTML = '<p class="notice-box" role="alert">' + esc(error.message) + '</p><a class="back" href="/">' + tr('back_missions') + '</a>';
   } finally { main.setAttribute('aria-busy','false'); }
 }
 document.querySelector('#language').addEventListener('click',async () => { lang = lang === 'ko' ? 'en' : 'ko'; localStorage.setItem('oc_language',lang); await render(); });
