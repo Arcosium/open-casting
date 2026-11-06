@@ -1,6 +1,6 @@
 # Operating Open Casting
 
-This is a local deployment rehearsal, dated 2026-11-06. No Render workspace, GitHub repository, public deployment or paid resource was created.
+Written as a local rehearsal on 2026-11-06. The same day the Blueprint went live on Render's free instances, so the steps below describe the running workspace; no paid resource exists and the $50 credit stays unused.
 
 ## Architecture and consistency
 
@@ -36,6 +36,8 @@ The helper creates synthetic local credentials in private runtime storage and a 
 ## Render deployment and rollback
 
 The schema-validated `render.yaml` provisions a Docker web service, PostgreSQL 18 and Key Value, all on Render's **free** instances in Singapore, with no card on file. Workflows has no free plan, so the Blueprint does not provision one. The Docker image runs as UID 10001. One worker runs per instance. PostgreSQL and Key Value have empty public IP allow lists.
+
+The live service reads its source from `Arcosium/open-casting` through the Render GitHub app, installed on 2026-11-06 with repository access limited to that one repository. Pushes to `main` now start an Auto-Deploy, and the Deploys page records the trigger, so no dashboard click is needed after a push. Before the app was installed the service was linked by the public repository URL and only the dashboard's Manual Deploy button could publish a new commit.
 
 After repository publication and account setup are separately approved:
 
