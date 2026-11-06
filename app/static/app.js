@@ -115,7 +115,7 @@ function showLater() {
   }
   for (const element of main.querySelectorAll('.later:not(.in)')) if (element.getBoundingClientRect().top < innerHeight * .92) element.classList.add('in');
 }
-addEventListener('scroll', () => requestAnimationFrame(showLater), {passive: true});
+for (const type of ['scroll', 'resize']) addEventListener(type, () => requestAnimationFrame(showLater), {passive: true});   // 창을 키워도 들어온 것은 보이게(11/06 교차 검토)
 // 누른 자리에서 번지는 물결 — 버튼마다 손가락이 닿은 곳을 보여 준다
 document.addEventListener('pointerdown', e => {
   const target = e.target.closest?.('.button, button');
@@ -136,7 +136,7 @@ async function missionPage(id) {
   let lastScore = null, lastCell = null, lastUsed = null;
   const intro = () => {
     clearInterval(interval);
-    lastScore = null; lastUsed = null;
+    lastScore = null; lastUsed = null; lastCell = null;   // 끝난 판의 마지막 칸이 새 판에 강조되지 않게(11/06 교차 검토)
     main.innerHTML = head + '<div class="game-layout"><section class="game-panel monitor enter"><div class="monitor-bar"><span class="vf-rec standby"><i></i>STANDBY</span><span>' + tr('meta_' + currentMission.template) + '</span></div><p class="game-intro">' + tr('desc_' + currentMission.template) + '</p>' + field('nickname', 'nickname', 'text', 'maxlength="24" autocomplete="off" value="' + esc(localStorage.getItem('oc_nickname') || '') + '"', 'nickname_hint') + '<div class="actions"><button id="start"' + (!currentMission.active || detail.attempts_left === 0 ? ' disabled' : '') + '>' + tr('start_run') + '</button>' + (run ? '<button id="resume" class="secondary">' + tr(run.finished ? 'view_record' : 'resume') + '</button>' : '') + '</div><p class="hint">' + tr('attempts_left', {n: detail.attempts_left}) + '</p>' + (!currentMission.active ? '<p class="hint">' + tr('closed') + '</p>' : '') + '</section>' + rulesAside(currentMission.template) + '</div>';
     action('#start', async () => {
       const nickname = document.querySelector('#nickname').value.trim();

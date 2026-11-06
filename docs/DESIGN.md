@@ -44,6 +44,8 @@ The owner rejected the first version (pale yellow-green on an off-white backgrou
 | 390px viewfinder | 16:10 | 4:3 | Autofocus box overlapped `TAKE 01` |
 | Casting band headline | Broke as "신청할 / 수 있어요." | No-break space in "신청할 수" | Split phrase |
 | English 390px info strip | Two items | First item only | 25px horizontal overflow |
+| Scroll-in reveal (cross-review) | Re-checked only on scroll | Also on resize | Growing the window left rows in view at opacity 0 |
+| Ore hunt retry (cross-review) | Last dug cell kept between runs | Reset in the intro screen | A new run replayed the dig animation on the previous run's last cell |
 | Player-facing Korean copy | Mixed 해요체 and 합니다체 in one sentence | 해요체 (consent and studio text stay formal) | Inconsistent voice |
 
 ## Verification
