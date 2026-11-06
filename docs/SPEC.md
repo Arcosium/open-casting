@@ -134,7 +134,14 @@ Today every answer, dig and mission-detail request takes `FOR UPDATE` on the mis
 ### 8.7 `docs/OPERATIONS.md` (English, for judges)
 Architecture (text diagram), scaling, CI/CD, monitoring (healthz, metrics, JSON logs, Render alerts), resilience (rate limits, caching, load numbers, rollback), maintenance (backups, patches, on-call), monthly cost at idle and at spike. Mark Render-only numbers as TODO.
 
-### 8.8 Done criteria for M2 (local)
+### 8.8 Free-plan deployment (owner decision 2026-11-06)
+The owner dropped the optional Best Use of Render track (it requires Workflows, which has no free plan) and deploys on Render's free instances only, with no card on file. This overrides the plans in §8.3 until the owner approves paid instances:
+- web, Postgres and Key Value use plan `free`; no `scaling` (free web services run one instance); no workflow service in the Blueprint (`app/workflows.py` stays in the repo, unprovisioned).
+- Free web services have no `preDeployCommand`, so `dockerCommand` runs `python -m app.db init` and then `app.serve`. With one instance there is no DDL race. Restore `preDeployCommand` with the first paid plan.
+- Free limits to state in OPERATIONS: spin-down after 15 idle minutes (about a minute to wake), free Postgres expires 30 days after creation (14-day grace, then deleted), Key Value is in-memory only, outbound bandwidth over the included amount suspends the services without a card.
+- Upgrade path: switch the three plans back to §8.3 values, then restore `preDeployCommand` and scaling (autoscaling needs a Pro workspace).
+
+### 8.9 Done criteria for M2 (local)
 - `pytest -q` passes on SQLite and on PostgreSQL + Valkey, including the new concurrency tests.
 - `docker compose up` → `/healthz` returns `{"ok": true, "cache": "redis"}`.
 - `render.yaml` is schema-valid; the Dockerfile builds.

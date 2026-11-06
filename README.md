@@ -67,7 +67,7 @@ RATE_LIMIT_IP=300 docker compose --env-file _workspace/compose.env -p open-casti
 docker compose --env-file _workspace/compose.env -p open-casting down
 ```
 
-See [docs/OPERATIONS.md](docs/OPERATIONS.md) for measured load results, the knee, Pro/Hobby Blueprint settings, workflow scheduling, monitoring, recovery and costs. `render.yaml` is validated against the official public JSON schema without making account API calls. Workflows require real-workspace registration before the trigger can be used. No deployment happens from these local checks.
+See [docs/OPERATIONS.md](docs/OPERATIONS.md) for measured load results, the knee, the free-plan Blueprint and its limits, the paid upgrade path, workflow scheduling, monitoring, recovery and costs. `render.yaml` is validated against the official public JSON schema without making account API calls. The Blueprint deploys on Render's free instances and does not provision Workflows (no free plan); the workflow code stays for a later paid setup. No deployment happens from these local checks.
 
 ## Features and routes
 

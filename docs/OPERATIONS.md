@@ -35,19 +35,28 @@ The helper creates synthetic local credentials in private runtime storage and a 
 
 ## Render deployment and rollback
 
-The schema-validated `render.yaml` provisions a Docker web service (`0.5c-512mb`), PostgreSQL (`0.1c-256mb`, version 18), Key Value (`256mb`) and a Python workflow, all in Singapore. The Docker image runs as UID 10001. One worker runs per instance. PostgreSQL and Key Value have empty public IP allow lists.
+The schema-validated `render.yaml` provisions a Docker web service, PostgreSQL 18 and Key Value, all on Render's **free** instances in Singapore, with no card on file. Workflows has no free plan, so the Blueprint does not provision one. The Docker image runs as UID 10001. One worker runs per instance. PostgreSQL and Key Value have empty public IP allow lists.
 
 After repository publication and account setup are separately approved:
 
 1. Connect the approved repository to a Blueprint. Supply the scrypt `STUDIO_PASSWORD_HASH` and `METRICS_TOKEN` through Render's secret inputs. Never paste them into YAML or logs. Share the generated `SESSION_SECRET` across web instances.
-2. For a Pro workspace, keep CPU autoscaling at 70%, min 1/max 3. On Hobby, remove `scaling` and set `numInstances: 1`; manual scaling must be explicitly budgeted. Confirm which workspace features are available before applying the Blueprint.
+2. Free web services run one instance and have no pre-deploy step, so `dockerCommand` runs `python -m app.db init` before `app.serve`.
 3. Verify both GitHub jobs are required/passing and that `checksPass` gates deployment; this behavior cannot be tested without a connected repository.
-4. Confirm pre-deploy finishes, `/healthz` reports `ok: true, cache: redis`, the sponsor labels remain visible and authenticated metrics are scraped.
+4. Confirm the init step finishes in the deploy log, `/healthz` reports `ok: true, cache: redis`, the sponsor labels remain visible and authenticated metrics are scraped.
 5. To roll back: open the web service's Events/Deploys page, choose the last known good deploy, select Rollback, confirm, then check health, a mission and studio access. A code rollback does not undo SQL changes. Restore a database backup only through a reviewed recovery procedure.
+
+Free-plan limits (official [free instance docs](https://render.com/docs/free), checked 2026-11-06):
+
+- The web service spins down after 15 minutes without traffic and takes about a minute to wake; open the demo URL once before a judge or creator does.
+- Free PostgreSQL expires 30 days after creation, then has a 14-day grace period before Render deletes it. It has no backups. Recreate it (or upgrade it) before expiry; `SEED_DEMO` reseeds the demo rows on the next start.
+- Free Key Value is in-memory only. A restart clears cached leaderboards and rate-limit counters, which rebuild on demand.
+- Without a card, exceeding the included outbound bandwidth suspends the services for the rest of the month, and exceeding pipeline minutes pauses new builds.
+
+Paid upgrade path: set the web plan to `0.5c-512mb`, PostgreSQL to `0.1c-256mb` and Key Value to `256mb`; replace `dockerCommand` with `preDeployCommand: python -m app.db init`; add CPU autoscaling (70%, min 1/max 3, Pro workspace only) or a budgeted `numInstances`; then add the workflow service and the cron trigger below.
 
 ## Render Workflows
 
-Official sources checked on 2026-11-06: [introduction](https://render.com/docs/workflows), [Python SDK](https://render.com/docs/workflows-sdk-python), [task definitions](https://render.com/docs/workflows-defining-tasks), [triggering runs](https://render.com/docs/workflows-running), and [limits and pricing](https://render.com/docs/workflows-limits).
+Not deployed on the free plan. The code is ready for a paid setup. Official sources checked on 2026-11-06: [introduction](https://render.com/docs/workflows), [Python SDK](https://render.com/docs/workflows-sdk-python), [task definitions](https://render.com/docs/workflows-defining-tasks), [triggering runs](https://render.com/docs/workflows-running), and [limits and pricing](https://render.com/docs/workflows-limits).
 
 `python -m app.workflows` registers `rotate_daily_missions`, `close_due_missions`, `purge_expired_applications`, and `build_sponsor_report` with Render SDK 1.7.0. Each task has a 300-second attempt timeout, up to three retries, and the `flex` compute plan. Only dates, timestamps, mission IDs, aggregate reports and counts enter/leave tasks. Casting contact data is never a task input or result. Local tests call the same registered functions with a synthetic SQL database; no Render API call is made.
 
@@ -120,13 +129,13 @@ Restore `RATE_LIMIT_IP=300` after a rehearsal and stop only the `open-casting` p
 
 Enable managed PostgreSQL backups/PITR as supported by the chosen plan and test restores into a separate database. Contacts are deleted after 30 days by both maintenance and studio access safeguards; restored backups must run the purge before being exposed. Keep backups and exports private, restrict studio access and rotate its password/session key on compromise. Review base image and dependency security updates monthly, stage upgrades in this same test stack, run both test backends and a short smoke test, then deploy. The solo owner is on call; production launch needs an alert destination and documented backup operator.
 
-The official [pricing page](https://render.com/pricing) did not expose web, database, Key Value or workspace prices in the fetched page. Those amounts are TODO rather than estimates:
+Current deployment: all three services on free instances, $0/month. The $50 participant credit stays unused until paid instances are approved. Paid prices below are from the official [pricing page](https://render.com/pricing) on 2026-11-06, prorated by the second:
 
 | Component | Idle/month | Spike/month or usage |
 |---|---:|---:|
-| Web 0.5c-512mb | TODO | TODO: 1-3 instances and spike duration |
-| PostgreSQL 0.1c-256mb + storage/backups | TODO | TODO |
-| Key Value 256mb | TODO | TODO |
+| Web: free (current) / 0.5c-512mb | $0 / $7 | free: one instance only; paid: $7 per instance-month for 1-3 instances |
+| PostgreSQL: free (current) / 0.1c-256mb | $0 / $6 + $0.30 per GB storage | same |
+| Key Value: free (current, 25 MB) / 256mb | $0 / $10 | same |
 | Workspace Pro, scheduling service, bandwidth | TODO | TODO |
 | Workflows flex | Usage based | $0.20/CPU-hour + $0.05/GB-hour, plus state retention |
 | Total | TODO | TODO |

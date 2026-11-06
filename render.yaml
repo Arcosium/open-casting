@@ -3,14 +3,11 @@ services:
     name: open-casting
     runtime: docker
     region: singapore
-    plan: 0.5c-512mb
+    plan: free
     healthCheckPath: /healthz
     autoDeployTrigger: checksPass
-    preDeployCommand: python -m app.db init
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetCPUPercent: 70
+    # ponytail: free plan has no preDeployCommand; one instance, so init before serve cannot race. Move back to preDeployCommand on a paid plan.
+    dockerCommand: /bin/sh -c "python -m app.db init && exec python -m app.serve"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -40,29 +37,12 @@ services:
   - type: keyvalue
     name: open-casting-cache
     region: singapore
-    plan: 256mb
+    plan: free
     ipAllowList: []
     maxmemoryPolicy: noeviction
-  - type: workflow
-    name: open-casting-jobs
-    runtime: python
-    region: singapore
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m app.workflows
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.12
-      - key: DATABASE_URL
-        fromDatabase:
-          name: open-casting-db
-          property: connectionString
-      - key: DB_POOL_SIZE
-        value: "1"
-      - key: DB_MAX_OVERFLOW
-        value: "0"
 databases:
   - name: open-casting-db
     region: singapore
-    plan: 0.1c-256mb
+    plan: free
     postgresMajorVersion: "18"
     ipAllowList: []
