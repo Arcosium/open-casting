@@ -87,6 +87,7 @@ def main():
                                 expect(page.locator('main [role=alert]')).to_have_count(0)
                             def shot(name, full=True):
                                 path = out/(str(width)+'-'+name+'.png')
+                                page.evaluate("window.scrollTo(0, document.body.scrollHeight)"); page.wait_for_timeout(120); page.evaluate("window.scrollTo(0, 0)")  # reveal scroll-in content like a reader would
                                 page.evaluate("Promise.all(document.getAnimations().filter(a => a.effect.getTiming().iterations !== Infinity).map(a => a.finished.catch(() => null)))")  # settle one-shot entrance motion
                                 page.screenshot(path=str(path),full_page=full)
                                 defects = page.evaluate(checker.JS,False)
@@ -184,7 +185,7 @@ def main():
                             page.locator('#language').click()
                             expect(page.locator('html')).to_have_attribute('lang','en')
                             expect(page.locator('main')).to_have_attribute('aria-busy','false')
-                            expect(page.locator('h1')).to_contain_text('starts with you')
+                            expect(page.locator('h1')).to_contain_text('from the videos')
                             shot('home-en')
                             context.close()
                             print('Browser journeys complete at '+str(width)+' px',flush=True)

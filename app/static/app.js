@@ -61,14 +61,71 @@ function rulesAside(template) {
 
 async function home() {
   const {missions} = await api('/api/missions');
-  main.innerHTML = '<section class="stage bleed"><div class="markers" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="stage-copy"><p class="eyebrow">' + tr('hero_kicker') + '</p><h1><span>' + tr('hero_a') + '</span><span>' + tr('hero_b') + '</span></h1><p class="description">' + tr('hero_desc') + '</p><div class="actions">' + button('hero_cta', '#missions') + '</div></div><div class="viewfinder" aria-hidden="true"><div class="vf-top"><span class="vf-rec"><i></i>REC</span><span id="timecode">00:00:00:00</span></div><b>' + tr('art_title').replace('\n', '<br>') + '</b><p>' + tr('art_caption') + '</p></div><div class="stage-mark" aria-hidden="true">OPEN CASTING</div></section><section id="missions" class="missions"><div class="section-heading"><h2>' + tr('missions_today') + '</h2><p>' + tr('daily_limit') + '</p></div><div class="mission-list">' + missions.map(m => '<article class="mission-row">' + glyph(m.template) + '<div class="mission-copy">' + (m.is_sponsored ? '<div class="ad-inline">광고 · Sponsored by ' + esc(m.sponsor_name) + '</div>' : '') + '<h3><a href="/missions/' + esc(m.id) + '">' + esc(title(m)) + '</a></h3><p>' + tr('desc_' + m.template) + '</p><div class="meta"><span>' + tr('meta_' + m.template) + '</span></div></div>' + button(m.active ? 'play' : 'closed', '/missions/' + m.id, true) + '</article>').join('') + '</div></section><section class="casting-call bleed"><h2>' + tr('casting_cta_title') + '</h2><p>' + tr('casting_cta_desc') + '</p>' + button('nav_casting', '/casting') + '</section>';
+  main.innerHTML = '<section class="stage bleed"><div class="markers" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="stage-copy"><h1><span>' + tr('hero_a') + '</span><span>' + tr('hero_b') + '</span></h1><p class="description">' + tr('hero_desc') + '</p><div class="actions">' + button('hero_cta', '#missions') + '</div></div><div class="viewfinder" aria-hidden="true"><div class="vf-top"><span class="vf-rec"><i></i>REC</span><span id="timecode">00:00:00:00</span></div><span class="af"></span><span class="flash"></span><b>' + tr('vf_take') + ' <span id="take">01</span></b><p>' + tr('vf_hint') + '</p></div><div class="stage-mark" aria-hidden="true">' + [...'OPEN CASTING'].map(c => c === ' ' ? ' ' : '<span>' + c + '</span>').join('') + '</div></section><section id="missions" class="missions"><div class="section-heading"><h2>' + tr('missions_today') + '</h2></div><div class="mission-list">' + missions.map(m => '<article class="mission-row">' + glyph(m.template) + '<div class="mission-copy">' + (m.is_sponsored ? '<div class="ad-inline">광고 · Sponsored by ' + esc(m.sponsor_name) + '</div>' : '') + '<h3><a href="/missions/' + esc(m.id) + '">' + esc(title(m)) + '</a></h3><p>' + tr('desc_' + m.template) + '</p><div class="meta"><span>' + tr('meta_' + m.template) + '</span></div></div>' + button(m.active ? 'play' : 'closed', '/missions/' + m.id, true) + '</article>').join('') + '</div></section><section class="casting-call bleed"><h2>' + tr('casting_cta_title') + '</h2>' + button('nav_casting', '/casting') + '</section>';
   const timecode = document.querySelector('#timecode'), start = performance.now();
   clearInterval(interval);
   if (!calm()) interval = setInterval(() => {
     const frames = Math.floor((performance.now() - start) * .03);
     timecode.textContent = [frames / 108000, frames / 1800 % 60, frames / 30 % 60, frames % 30].map(v => String(Math.floor(v)).padStart(2, '0')).join(':');
   }, 1000 / 30);
+  stageFx();
 }
+// 화면이 손에 반응한다(사장 지시 2026-11-06): 뷰파인더가 포인터를 따라 초점을 잡고 누르면 한 컷 찍는다. 대형 글자는 지나가면 튀어 오른다
+function stageFx() {
+  const stage = main.querySelector('.stage'), vf = stage.querySelector('.viewfinder'), take = vf.querySelector('#take');
+  let shots = 1;
+  const aim = e => {
+    const r = vf.getBoundingClientRect(), x = Math.max(36, Math.min(r.width - 36, e.clientX - r.left)), y = Math.max(28, Math.min(r.height - 28, e.clientY - r.top));
+    vf.style.setProperty('--dx', (x - r.width / 2).toFixed(1) + 'px');
+    vf.style.setProperty('--dy', (y - r.height * .45).toFixed(1) + 'px');
+    if (e.pointerType === 'mouse') {
+      vf.style.setProperty('--ty', (((e.clientX - r.left) / r.width - .5) * 8).toFixed(2) + 'deg');
+      vf.style.setProperty('--tx', ((.5 - (e.clientY - r.top) / r.height) * 6).toFixed(2) + 'deg');
+    }
+  };
+  stage.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !calm()) aim(e); });
+  stage.addEventListener('pointerleave', () => { for (const v of ['--dx', '--dy', '--tx', '--ty']) vf.style.removeProperty(v); });
+  vf.addEventListener('pointerdown', e => {
+    aim(e);
+    take.textContent = String(++shots).padStart(2, '0');
+    replay(vf, 'shot');
+  });
+  const letters = [...stage.querySelectorAll('.stage-mark span')];
+  letters.forEach((letter, i) => {
+    letter.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') replay(letter, 'hop'); });
+    letter.addEventListener('pointerdown', () => letters.forEach((other, j) => { other.style.animationDelay = Math.abs(i - j) * 40 + 'ms'; replay(other, 'hop'); }));
+    letter.addEventListener('animationend', () => { letter.classList.remove('hop'); letter.style.removeProperty('animation-delay'); });
+  });
+}
+function replay(element, name) {
+  if (calm()) return;
+  element.classList.remove(name);
+  void element.offsetWidth;
+  element.classList.add(name);
+}
+// 화면 아래에 있던 것은 스크롤해 들어올 때 나타난다. 처음에는 모두 보이게 두고(스크롤 없는 캡처·미리보기에 빈칸이 생기지 않게),
+// 첫 스크롤 때 아직 아래에 있는 것만 숨긴다. 맨 아래로 건너뛰어도 지나친 것까지 보이게 스크롤마다 위치를 본다
+let armed = true;
+function reveal() { armed = calm(); }
+function showLater() {
+  if (!armed) {
+    armed = true;
+    for (const element of main.querySelectorAll('.mission-row, .section-heading h2, .casting-call > *, .steps section, .faq-list details, .stat-grid, .form-aside'))
+      if (element.getBoundingClientRect().top > innerHeight) element.classList.add('later');
+  }
+  for (const element of main.querySelectorAll('.later:not(.in)')) if (element.getBoundingClientRect().top < innerHeight * .92) element.classList.add('in');
+}
+addEventListener('scroll', () => requestAnimationFrame(showLater), {passive: true});
+// 누른 자리에서 번지는 물결 — 버튼마다 손가락이 닿은 곳을 보여 준다
+document.addEventListener('pointerdown', e => {
+  const target = e.target.closest?.('.button, button');
+  if (!target || target.disabled || calm()) return;
+  const r = target.getBoundingClientRect();
+  target.style.setProperty('--rx', (e.clientX - r.left).toFixed(0) + 'px');
+  target.style.setProperty('--ry', (e.clientY - r.top).toFixed(0) + 'px');
+  target.style.setProperty('--rs', (Math.hypot(r.width, r.height) / 10).toFixed(1));
+  replay(target, 'ripple');
+});
 
 async function missionPage(id) {
   const detail = await api('/api/missions/' + encodeURIComponent(id));
@@ -76,8 +133,10 @@ async function missionPage(id) {
   run = detail.recent_run;
   ad(currentMission);
   const head = '<div class="mission-top bleed"><a class="back" href="/">' + tr('back_missions') + '</a><div class="mission-title">' + glyph(currentMission.template) + '<h1>' + esc(title(currentMission)) + '</h1></div></div>';
+  let lastScore = null, lastCell = null, lastUsed = null;
   const intro = () => {
     clearInterval(interval);
+    lastScore = null; lastUsed = null;
     main.innerHTML = head + '<div class="game-layout"><section class="game-panel monitor enter"><div class="monitor-bar"><span class="vf-rec standby"><i></i>STANDBY</span><span>' + tr('meta_' + currentMission.template) + '</span></div><p class="game-intro">' + tr('desc_' + currentMission.template) + '</p>' + field('nickname', 'nickname', 'text', 'maxlength="24" autocomplete="off" value="' + esc(localStorage.getItem('oc_nickname') || '') + '"', 'nickname_hint') + '<div class="actions"><button id="start"' + (!currentMission.active || detail.attempts_left === 0 ? ' disabled' : '') + '>' + tr('start_run') + '</button>' + (run ? '<button id="resume" class="secondary">' + tr(run.finished ? 'view_record' : 'resume') + '</button>' : '') + '</div><p class="hint">' + tr('attempts_left', {n: detail.attempts_left}) + '</p>' + (!currentMission.active ? '<p class="hint">' + tr('closed') + '</p>' : '') + '</section>' + rulesAside(currentMission.template) + '</div>';
     action('#start', async () => {
       const nickname = document.querySelector('#nickname').value.trim();
@@ -103,13 +162,18 @@ async function missionPage(id) {
       return;
     }
     let content = '';
-    if (template === 'no-rieul') content = '<p class="progress">' + tr('round', {n:run.index + 1,total:8}) + '</p><div class="prompt">' + tr('category_' + run.category) + '</div><form id="answer" class="game-form"><label class="sr-only" for="word">' + tr('answer_label') + '</label><input id="word" name="word" maxlength="100" required autocomplete="off"><button type="submit">' + tr('answer_submit') + '</button></form><p class="hint">' + tr('word_hint') + '</p><p class="hint">' + tr('used_words') + ': ' + run.used.map(esc).join(', ') + '</p>';
+    if (template === 'no-rieul') content = '<p class="progress">' + tr('round', {n:run.index + 1,total:8}) + '</p><div class="prompt">' + tr('category_' + run.category) + '</div><form id="answer" class="game-form"><label class="sr-only" for="word">' + tr('answer_label') + '</label><input id="word" name="word" maxlength="100" required autocomplete="off"><button type="submit">' + tr('answer_submit') + '</button></form><p class="hint">' + tr('word_hint') + '</p><p class="hint">' + tr('used_words') + ': ' + run.used.map((w, i) => '<span' + (lastUsed !== null && i >= lastUsed ? ' class="new"' : '') + '>' + esc(w) + '</span>').join(', ') + '</p>';
     if (template === 'telepathy') content = '<p class="progress">' + tr('round', {n:run.index + 1,total:10}) + '</p><div class="prompt">' + tr('question_' + run.index) + '</div><div class="answer-options">' + [0,1,2,3].map(n => '<button data-option="' + n + '">' + tr('option_' + run.index + '_' + n) + '</button>').join('') + '</div><p class="hint">' + tr('provisional') + '</p>';
     if (template === 'ore-hunt') content = '<p class="progress">' + tr('digs_left', {n:25 - Object.keys(run.digs).length}) + '</p>' + gridHtml(false) + '<p class="hint">' + tr('ore_legend') + '</p>';
     main.innerHTML = head + '<div class="game-layout"><section class="game-panel monitor live"><div class="monitor-bar"><span class="vf-rec"><i></i>REC</span><span>' + esc(title(currentMission)) + '</span></div><div class="game-head"><div><div class="timer" id="timer" aria-label="' + tr('time_left') + '"></div><span class="progress">' + tr('time_left') + '</span></div><div class="score"><strong>' + (run.score ?? '–') + '</strong><span>' + tr('score') + '</span></div></div><div class="time-bar" aria-hidden="true"><i id="timebar"></i></div>' + content + '</section>' + rulesAside(template) + '</div>';
+    const strong = main.querySelector('.score strong');
+    if (lastScore !== null && run.score > lastScore) replay(strong, 'bump');
+    lastScore = run.score ?? 0;
+    lastUsed = run.used?.length || 0;
+    if (lastCell !== null) { const cell = main.querySelector('[data-cell="' + lastCell + '"]'); if (cell) replay(cell, 'just'); lastCell = null; }
     action('#answer', async () => { run = await api('/api/runs/' + run.id + '/answer', {text:document.querySelector('#word').value,index:run.index}); game(); }, 'submit');
     for (const element of document.querySelectorAll('[data-option]')) action('[data-option="' + element.dataset.option + '"]', async () => { run = await api('/api/runs/' + run.id + '/answer', {text:Number(element.dataset.option),index:run.index}); game(); });
-    for (const element of document.querySelectorAll('[data-cell]:not(:disabled)')) action('[data-cell="' + element.dataset.cell + '"]', async () => { const cell = Number(element.dataset.cell); run = await api('/api/runs/' + run.id + '/dig', {x:cell % 10,y:Math.floor(cell / 10)}); game(); });
+    for (const element of document.querySelectorAll('[data-cell]:not(:disabled)')) action('[data-cell="' + element.dataset.cell + '"]', async () => { const cell = Number(element.dataset.cell); lastCell = cell; run = await api('/api/runs/' + run.id + '/dig', {x:cell % 10,y:Math.floor(cell / 10)}); game(); });
     const localStart = performance.now();
     const snapshot = run;
     let checking = false;
@@ -147,13 +211,13 @@ async function leaderboardPage() {
   const selected = new URLSearchParams(location.search).get('mission') || 'weekly';
   const result = await api('/api/leaderboards/' + encodeURIComponent(selected));
   ad(missions.find(m => m.id === selected));
-  main.innerHTML = pageTop('leaderboard_title','leaderboard_desc') + '<label for="scope">' + tr('choose_mission') + '</label><select id="scope"><option value="weekly">' + tr('weekly') + '</option>' + missions.map(m => '<option value="' + esc(m.id) + '"' + (selected === m.id ? ' selected' : '') + '>' + esc(title(m)) + (m.is_sponsored ? ' · ' + esc(m.sponsor_name) : '') + '</option>').join('') + '</select>' + (result.has_demo ? '<div class="demo-note">' + tr('demo_badge') + '</div>' : '') + (result.provisional ? '<p class="hint">' + tr('provisional') + '</p>' : '') + '<div class="table-wrap"><table class="rank-table"><thead><tr><th>' + tr('rank') + '</th><th>' + tr('player') + '</th><th>' + tr('score') + '</th></tr></thead><tbody>' + result.rows.map(r => '<tr' + (r.rank <= 3 ? ' class="top"' : '') + '><td>' + r.rank + '</td><td>' + esc(r.nickname) + (r.is_demo ? '<small>' + tr('demo_row') + '</small>' : '') + '</td><td>' + r.score + '</td></tr>').join('') + '</tbody></table></div>' + (!result.rows.length ? '<p class="empty">' + tr('no_records') + '</p>' : '') + '<div class="my-rank"><strong>' + tr('my_rank') + '</strong><span>' + (result.mine ? result.mine.rank + ' · ' + esc(result.mine.nickname) + ' · ' + result.mine.score : tr('no_my_rank')) + '</span></div><p class="hint">' + tr('display_only') + '</p>';
+  main.innerHTML = pageTop('leaderboard_title') + '<label for="scope">' + tr('choose_mission') + '</label><select id="scope"><option value="weekly">' + tr('weekly') + '</option>' + missions.map(m => '<option value="' + esc(m.id) + '"' + (selected === m.id ? ' selected' : '') + '>' + esc(title(m)) + (m.is_sponsored ? ' · ' + esc(m.sponsor_name) : '') + '</option>').join('') + '</select>' + (result.has_demo ? '<div class="demo-note">' + tr('demo_badge') + '</div>' : '') + (result.provisional ? '<p class="hint">' + tr('provisional') + '</p>' : '') + '<div class="table-wrap"><table class="rank-table"><thead><tr><th>' + tr('rank') + '</th><th>' + tr('player') + '</th><th>' + tr('score') + '</th></tr></thead><tbody>' + result.rows.map(r => '<tr' + (r.rank <= 3 ? ' class="top"' : '') + '><td>' + r.rank + '</td><td>' + esc(r.nickname) + (r.is_demo ? '<small>' + tr('demo_row') + '</small>' : '') + '</td><td>' + r.score + '</td></tr>').join('') + '</tbody></table></div>' + (!result.rows.length ? '<p class="empty">' + tr('no_records') + '</p>' : '') + '<div class="my-rank"><strong>' + tr('my_rank') + '</strong><span>' + (result.mine ? result.mine.rank + ' · ' + esc(result.mine.nickname) + ' · ' + result.mine.score : tr('no_my_rank')) + '</span></div><p class="hint">' + tr('display_only') + '</p>';
   document.querySelector('#scope').addEventListener('change', e => location.href = '/leaderboard?mission=' + encodeURIComponent(e.target.value));
 }
 
 async function castingPage() {
   const eligibility = await api('/api/casting/eligibility');
-  main.innerHTML = pageTop('casting_title','casting_desc') + '<div class="form-layout"><section><div class="notice-box">' + tr(eligibility.eligible ? 'eligible' : 'not_eligible_msg') + (eligibility.eligible ? '<p class="hint">' + eligibility.records.map(r => tr(r.template) + ' ' + r.score).join(' · ') + '</p>' : '<div class="actions section-gap">' + button('nav_missions','/') + '</div>') + '</div><form id="casting-form">' + field('nickname','nickname','text','required maxlength="24" value="' + esc(localStorage.getItem('oc_nickname') || '') + '"','nickname_hint') + field('birth_year','birth_year','number','required min="1900" max="2200" inputmode="numeric"','age_hint') + field('contact','contact','text','required maxlength="120" autocomplete="off"','contact_hint') + '<div class="field"><label for="intro">' + tr('intro') + '</label><textarea name="intro" id="intro" maxlength="100" required aria-describedby="intro-hint"></textarea><small id="intro-hint">' + tr('intro_hint') + '</small></div><div class="field"><label class="checkbox"><input type="checkbox" name="consent" required><span>' + tr('consent') + '</span></label></div><button type="submit"' + (!eligibility.eligible ? ' disabled' : '') + '>' + tr('apply') + '</button></form></section><aside class="form-aside"><h2>' + tr('casting_steps_title') + '</h2><ol>' + [1,2,3].map(i => '<li>' + tr('casting_step' + i) + '</li>').join('') + '</ol><p class="hint">' + tr('footer_guard') + '</p></aside></div>';
+  main.innerHTML = pageTop('casting_title') + '<div class="form-layout"><section><div class="notice-box">' + tr(eligibility.eligible ? 'eligible' : 'not_eligible_msg') + (eligibility.eligible ? '<p class="hint">' + eligibility.records.map(r => tr(r.template) + ' ' + r.score).join(' · ') + '</p>' : '<div class="actions section-gap">' + button('nav_missions','/') + '</div>') + '</div><form id="casting-form">' + field('nickname','nickname','text','required maxlength="24" value="' + esc(localStorage.getItem('oc_nickname') || '') + '"','nickname_hint') + field('birth_year','birth_year','number','required min="1900" max="2200" inputmode="numeric"','age_hint') + field('contact','contact','text','required maxlength="120" autocomplete="off"','contact_hint') + '<div class="field"><label for="intro">' + tr('intro') + '</label><textarea name="intro" id="intro" maxlength="100" required aria-describedby="intro-hint"></textarea><small id="intro-hint">' + tr('intro_hint') + '</small></div><div class="field"><label class="checkbox"><input type="checkbox" name="consent" required><span>' + tr('consent') + '</span></label></div><button type="submit"' + (!eligibility.eligible ? ' disabled' : '') + '>' + tr('apply') + '</button></form></section><aside class="form-aside"><h2>' + tr('casting_steps_title') + '</h2><ol>' + [1,2,3].map(i => '<li>' + tr('casting_step' + i) + '</li>').join('') + '</ol><p class="hint">' + tr('footer_guard') + '</p></aside></div>';
   action('#casting-form', async e => {
     const data = new FormData(e.target);
     const result = await api('/api/casting', {nickname:data.get('nickname'),birth_year:Number(data.get('birth_year')),contact:data.get('contact'),intro:data.get('intro'),consent:data.get('consent') === 'on'});
@@ -162,7 +226,7 @@ async function castingPage() {
 }
 
 function studioLogin() {
-  main.innerHTML = '<section class="studio-login">' + pageTop('studio_title','studio_desc') + '<form id="login">' + field('password','studio_password','password','required maxlength="200" autocomplete="current-password"') + '<button type="submit">' + tr('login') + '</button></form></section>';
+  main.innerHTML = '<section class="studio-login">' + pageTop('studio_title') + '<form id="login">' + field('password','studio_password','password','required maxlength="200" autocomplete="current-password"') + '<button type="submit">' + tr('login') + '</button></form></section>';
   action('#login', async e => { await api('/api/studio/login',{password:new FormData(e.target).get('password')}); await render(); }, 'submit');
 }
 function studioNav() {
@@ -174,7 +238,7 @@ async function studioPage() {
   let missions;
   try { missions = (await api('/api/studio/missions')).missions; }
   catch (error) { if (error.status === 401) return studioLogin(); throw error; }
-  main.innerHTML = pageTop('studio_title','studio_desc') + studioNav() + '<section id="studio-content"></section>';
+  main.innerHTML = pageTop('studio_title') + studioNav() + '<section id="studio-content"></section>';
   action('#logout',async () => { await api('/api/studio/logout',{}); studioLogin(); });
   const content = document.querySelector('#studio-content');
   if (view === 'applications') {
@@ -228,7 +292,7 @@ async function render() {
   ad(null);
   document.documentElement.lang = lang;
   document.querySelector('#language').textContent = lang === 'ko' ? 'English' : '한국어';
-  document.querySelector('#ticker').innerHTML = ['missions_today', 'daily_limit', 'free_only', 'ticker_pick'].map(key => '<span>' + tr(key) + '</span>').join('');
+  document.querySelector('#ticker').innerHTML = ['daily_limit', 'free_only', 'ticker_pick'].map(key => '<span>' + tr(key) + '</span>').join('');
   document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
   document.querySelectorAll('[data-i18n-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.i18nLabel)));
   main.setAttribute('aria-busy','true');
@@ -242,6 +306,7 @@ async function render() {
     else if (path[0] === 'studio') await studioPage();
     else if (path[0] === 'sponsor') await sponsorPage();
     else faqPage();
+    reveal();
   } catch (error) {
     main.innerHTML = '<p class="notice-box" role="alert">' + esc(error.message) + '</p><a class="back" href="/">' + tr('back_missions') + '</a>';
   } finally { main.setAttribute('aria-busy','false'); }

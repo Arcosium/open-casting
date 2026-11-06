@@ -11,10 +11,12 @@ The owner rejected the first version (pale yellow-green on an off-white backgrou
 ## System
 
 - Type: Malgun Gothic for Korean and numbers, Arial Black for English headings and the wordmark, Arial for English body. Installed fonts only.
-- Stage: home hero, page headers and the mission header are chroma panels with slowly rotating tracking-marker crosses. The home hero carries a camera viewfinder (corner brackets, REC label, running timecode) and the `OPEN CASTING` wordmark on its bottom edge.
+- Stage: home hero, page headers and the mission header are chroma panels with slowly rotating tracking-marker crosses. The home hero carries a camera viewfinder (corner brackets, REC label, running timecode, an autofocus box and a take counter) and the `OPEN CASTING` wordmark on its bottom edge.
 - Missions: a call-sheet list with one glyph tile per template (ㄹ with a red slash, two rings, a 3×3 dig grid). Hover wipes the row green from the left.
 - Play: a black camera monitor with green corner brackets, a large timer, a time bar that drains and turns red under 30% time, and a stamped "컷! / CUT!" with a counting score on the result.
-- Motion: line wipes on headlines, a staggered list fade, viewfinder focus-in, prompt reveal, stamp, score count-up, toast entrance and cross-document view transitions. Entrance motion uses opacity, clip-path or shrinking scale only, so nothing overflows its box while it plays. `prefers-reduced-motion` removes animation and the timecode.
+- Motion: line wipes on headlines, a staggered list fade, viewfinder focus-in, prompt reveal, stamp, score count-up, toast entrance and cross-document view transitions.
+- Interaction (owner request, 2026-11-06 second pass): the viewfinder tilts toward the mouse and its autofocus box follows the pointer; pressing it fires a shutter flash, locks the box red and counts `TAKE 02, 03…`. Wordmark letters hop when the mouse passes and ripple outward from a tapped letter. Every button shows a ripple from the touch point. Score bumps when it rises, a freshly dug ore cell drops in (found ore overshoots), the newest cleared word slides into the list, answer options and leaderboard rows stagger in, and a tapped mission row fills green on touch screens. Content below the fold is hidden only after the first scroll and reappears as it scrolls in, so screenshots and link previews without scrolling never show blank space.
+- Copy: rewritten in plain 해요체 with concrete facts (round length, eligibility). Removed the hero kicker, the viewfinder slogan, the daily-limit badge beside the mission heading, the casting band subtitle, page-header subtitles on rankings, casting and studio, and the outlined footer wordmark. Entrance motion uses opacity, clip-path or shrinking scale only, so nothing overflows its box while it plays. `prefers-reduced-motion` removes animation and the timecode.
 - The sponsor label stays pinned to the top of every sponsored screen (legal guardrail).
 
 ## Defects found and fixed
@@ -36,6 +38,13 @@ The owner rejected the first version (pale yellow-green on an off-white backgrou
 | English hero | Four-line headline at 1280px | Smaller English size, two lines | Hero headline limit |
 | FAQ | Rotating `+` box overflowed the row | Swap to a minus sign | 7px horizontal spill |
 | `.sr-only` labels | Reported as clipped visible text | `opacity: 0` | Screen-reader labels stay accessible and invisible |
+
+| Scroll-in reveal | Hid below-fold content at load | Hide only on the first scroll | Full-page screenshots without scrolling showed blank mission rows |
+| Scroll-in reveal | IntersectionObserver | Position check on every scroll | Jumping to the bottom left skipped rows hidden |
+| 390px viewfinder | 16:10 | 4:3 | Autofocus box overlapped `TAKE 01` |
+| Casting band headline | Broke as "신청할 / 수 있어요." | No-break space in "신청할 수" | Split phrase |
+| English 390px info strip | Two items | First item only | 25px horizontal overflow |
+| Player-facing Korean copy | Mixed 해요체 and 합니다체 in one sentence | 해요체 (consent and studio text stay formal) | Inconsistent voice |
 
 ## Verification
 
