@@ -4,6 +4,8 @@ A free browser mission platform that connects viewers with future on-camera cast
 
 Everything in this implementation was built during the hackathon, starting **November 6, 2026**. The product source of truth is [docs/SPEC.md](docs/SPEC.md).
 
+**Live demo: https://open-casting.onrender.com** — Render's free plan (no card, $0/month), Singapore. A free instance sleeps after 15 minutes without traffic, so the first visit can take about a minute to wake. Pushes to `main` publish themselves through the Render GitHub app.
+
 ## Run locally
 
 Requires Python 3.12 and a browser. No frontend build step.
@@ -124,4 +126,4 @@ The test suite covers consonants, category validation/reuse, server timing, dete
 
 The browser script uses Playwright Chromium, real UI interactions and an isolated synthetic server with a random one-run studio password. It captures 390px/1280px home, all three missions at start/mid/result, leaderboards, casting, studio, builder, links, sponsored report, FAQ and English home. It checks layout with arka-design's checker and writes `_workspace/shots/` plus `_workspace/browser-results.json`. It closes its browser and its own server in `finally`.
 
-M2 adds local deployment configuration, Render Workflows SDK wiring, CI and load tests. Public deployment, payments and GitHub push remain separate approval steps. See [docs/DESIGN.md](docs/DESIGN.md) for design choices and the verification loop.
+M2 adds local deployment configuration, Render Workflows SDK wiring, CI and load tests. The public deployment and the GitHub push each landed on 2026-11-06 after their own approval; payments and Render Workflows stay unprovisioned because the free plan has no Workflows. See [docs/DESIGN.md](docs/DESIGN.md) for design choices and the verification loop.
