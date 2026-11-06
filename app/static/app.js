@@ -63,6 +63,7 @@ async function home() {
   const {missions} = await api('/api/missions');
   main.innerHTML = '<section class="stage bleed"><div class="markers" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="stage-copy"><p class="eyebrow">' + tr('hero_kicker') + '</p><h1><span>' + tr('hero_a') + '</span><span>' + tr('hero_b') + '</span></h1><p class="description">' + tr('hero_desc') + '</p><div class="actions">' + button('hero_cta', '#missions') + '</div></div><div class="viewfinder" aria-hidden="true"><div class="vf-top"><span class="vf-rec"><i></i>REC</span><span id="timecode">00:00:00:00</span></div><b>' + tr('art_title').replace('\n', '<br>') + '</b><p>' + tr('art_caption') + '</p></div><div class="stage-mark" aria-hidden="true">OPEN CASTING</div></section><section id="missions" class="missions"><div class="section-heading"><h2>' + tr('missions_today') + '</h2><p>' + tr('daily_limit') + '</p></div><div class="mission-list">' + missions.map(m => '<article class="mission-row">' + glyph(m.template) + '<div class="mission-copy">' + (m.is_sponsored ? '<div class="ad-inline">광고 · Sponsored by ' + esc(m.sponsor_name) + '</div>' : '') + '<h3><a href="/missions/' + esc(m.id) + '">' + esc(title(m)) + '</a></h3><p>' + tr('desc_' + m.template) + '</p><div class="meta"><span>' + tr('meta_' + m.template) + '</span></div></div>' + button(m.active ? 'play' : 'closed', '/missions/' + m.id, true) + '</article>').join('') + '</div></section><section class="casting-call bleed"><h2>' + tr('casting_cta_title') + '</h2><p>' + tr('casting_cta_desc') + '</p>' + button('nav_casting', '/casting') + '</section>';
   const timecode = document.querySelector('#timecode'), start = performance.now();
+  clearInterval(interval);
   if (!calm()) interval = setInterval(() => {
     const frames = Math.floor((performance.now() - start) * .03);
     timecode.textContent = [frames / 108000, frames / 1800 % 60, frames / 30 % 60, frames % 30].map(v => String(Math.floor(v)).padStart(2, '0')).join(':');
@@ -245,5 +246,11 @@ async function render() {
     main.innerHTML = '<p class="notice-box" role="alert">' + esc(error.message) + '</p><a class="back" href="/">' + tr('back_missions') + '</a>';
   } finally { main.setAttribute('aria-busy','false'); }
 }
-document.querySelector('#language').addEventListener('click',async () => { lang = lang === 'ko' ? 'en' : 'ko'; localStorage.setItem('oc_language',lang); await render(); });
+document.querySelector('#language').addEventListener('click',async () => {
+  if (busy) return;
+  busy = true;
+  lang = lang === 'ko' ? 'en' : 'ko';
+  localStorage.setItem('oc_language',lang);
+  try { await render(); } finally { busy = false; }
+});
 await render();
